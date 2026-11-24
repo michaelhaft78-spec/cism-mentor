@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/weekly-intel",
+      "schedule": "0 6 * * 1"
+    }
+  ]
+}
