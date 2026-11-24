@@ -4,7 +4,7 @@ import { generateWeeklyBriefing } from '@/lib/intel';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Gemini kan bij lange antwoorden of drukte ruim een minuut nodig hebben
 
 /**
  * GET: aangeroepen door Vercel Cron (maandag 06:00 UTC = 07:00 Amsterdam in de winter).

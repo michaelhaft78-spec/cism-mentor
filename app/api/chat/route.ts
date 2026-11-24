@@ -5,7 +5,7 @@ import { normalizeState, parseLooseJson, splitTaggedBlock } from '@/lib/state';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getOrCreateState, saveState } from '@/lib/user-state';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // Gemini kan bij lange antwoorden of drukte ruim een minuut nodig hebben
 
 const HISTORY_LIMIT = 20; // laatste 20 berichten als context
 

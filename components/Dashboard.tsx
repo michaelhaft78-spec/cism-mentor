@@ -13,6 +13,18 @@ interface Props {
   initialMessages: ChatMessage[];
 }
 
+/** Leest het antwoord veilig: Vercel geeft bij een time-out platte tekst i.p.v. JSON. */
+async function readJson(res: Response): Promise<any> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    if (res.status === 504 || /timeout|timed out|An error occurred/i.test(text))
+      return { error: 'De mentor deed er te lang over (time-out). Probeer het opnieuw.' };
+    return { error: `Onverwacht antwoord van de server (${res.status}).` };
+  }
+}
+
 const DOMAIN_SHORT: Record<string, string> = {
   domain_1_governance: 'D1',
   domain_2_risk_management: 'D2',
@@ -49,7 +61,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message }),
       });
-      const data = await res.json();
+      const data = await readJson(res);
       if (!res.ok) throw new Error(data.error || 'Onbekende fout');
       setMessages((m) => [...m, { role: 'model', content: data.reply }]);
       setState(data.state);
@@ -73,7 +85,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
     setNotice(null);
     try {
       const res = await fetch('/api/weekly-intel', { method: 'POST' });
-      const data = await res.json();
+      const data = await readJson(res);
       if (!res.ok) throw new Error(data.error || 'Onbekende fout');
       router.refresh();
     } catch (e) {
