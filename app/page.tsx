@@ -19,7 +19,15 @@ export default async function Page() {
   } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const state = await getOrCreateState(supabase, user.id);
+  const missingEnv = ['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'GEMINI_API_KEY'].filter(
+    (k) => !process.env[k],
+  );
+  let state;
+  try {
+    state = await getOrCreateState(supabase, user.id);
+  } catch (e) {
+    return <SetupError message={e instanceof Error ? e.message : String(e)} missingEnv={missingEnv} />;
+  }
 
   const [{ data: briefing }, { data: messages }] = await Promise.all([
     supabase
@@ -45,5 +53,39 @@ export default async function Page() {
       briefing={(briefing as Briefing) ?? null}
       initialMessages={((messages ?? []) as ChatMessage[]).reverse()}
     />
+  );
+}
+
+/** Leesbare foutmelding i.p.v. een generieke "server error" tijdens de setup. */
+function SetupError({ message, missingEnv }: { message: string; missingEnv: string[] }) {
+  const tableMissing = /does not exist|schema cache|relation/i.test(message);
+  const noPermission = /permission denied|row-level security/i.test(message);
+  return (
+    <main className="login">
+      <div className="card login-card" style={{ maxWidth: 560 }}>
+        <h1>Setup nog niet compleet</h1>
+        <p className="warn">{message}</p>
+        {missingEnv.length > 0 && (
+          <p>
+            Ontbrekende variabelen in Vercel: <strong>{missingEnv.join(', ')}</strong>. Voeg ze toe onder Settings →
+            Environment Variables en doe daarna een Redeploy.
+          </p>
+        )}
+        {tableMissing && (
+          <p>
+            De tabellen bestaan nog niet. Plak <code>supabase/schema.sql</code> in Supabase → SQL Editor en klik Run.
+          </p>
+        )}
+        {noPermission && (
+          <p>
+            Geen toegang tot de tabellen. Draai <code>supabase/schema.sql</code> opnieuw in de SQL Editor (de nieuwste
+            versie bevat de benodigde rechten).
+          </p>
+        )}
+        <form action="/auth/signout" method="post">
+          <button className="ghost" type="submit">Uitloggen</button>
+        </form>
+      </div>
+    </main>
   );
 }
