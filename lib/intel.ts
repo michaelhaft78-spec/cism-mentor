@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { getGemini, GEMINI_MODEL } from './gemini';
+import { generateWithFallback } from './gemini';
 import { MASTER_SYSTEM_PROMPT } from './master-prompt';
 import { DOMAIN_KEYS, parseLooseJson, splitTaggedBlock } from './state';
 import { getOrCreateState, saveState } from './user-state';
@@ -38,8 +38,7 @@ type Source = { title?: string; uri?: string };
 export async function generateWeeklyBriefing(supabase: SupabaseClient, userId: string) {
   const state = await getOrCreateState(supabase, userId);
 
-  const response = await getGemini().models.generateContent({
-    model: GEMINI_MODEL,
+  const response = await generateWithFallback({
     contents: buildPrompt(JSON.stringify(state, null, 2)),
     config: {
       systemInstruction: MASTER_SYSTEM_PROMPT,

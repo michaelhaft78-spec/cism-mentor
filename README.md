@@ -6,7 +6,7 @@ Persoonlijke web-app die je van **0 naar 100** brengt voor het ISACA **CISM**-ex
 - **Mentor-chat** (Gemini) met de volledige Master Prompt: leer-modus, diagnostische coach, en na elk antwoord automatisch bijgewerkte voortgang (`<STATE_UPDATE>`).
 - **Wekelijkse intel-briefing**: elke maandag om 07:00 zoekt Gemini (met Google Search) de 3 belangrijkste infosec-ontwikkelingen van de week en koppelt ze aan de CISM-domeinen. Met knop "Overhoor mij over het nieuws van deze week".
 
-Stack: Next.js (App Router, TypeScript) · Supabase (database + inloggen) · Gemini API (`gemini-2.5-flash`) · Vercel (hosting + cron).
+Stack: Next.js (App Router, TypeScript) · Supabase (database + inloggen) · Gemini API (`gemini-flash-latest`, altijd het actuele Flash-model) · Vercel (hosting + cron).
 
 ---
 

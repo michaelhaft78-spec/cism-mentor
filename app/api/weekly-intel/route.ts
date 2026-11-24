@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { describeGeminiError } from '@/lib/gemini';
 import { generateWeeklyBriefing } from '@/lib/intel';
 import { createSupabaseAdminClient } from '@/lib/supabase/admin';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -39,6 +40,6 @@ export async function POST() {
     return NextResponse.json({ status: 'ok', ...result });
   } catch (e) {
     console.error('weekly-intel handmatig fout:', e);
-    return NextResponse.json({ error: 'Briefing genereren mislukt. Probeer het later opnieuw.' }, { status: 500 });
+    return NextResponse.json({ error: describeGeminiError(e) }, { status: 500 });
   }
 }

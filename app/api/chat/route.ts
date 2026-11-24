@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getGemini, GEMINI_MODEL } from '@/lib/gemini';
+import { describeGeminiError, generateWithFallback } from '@/lib/gemini';
 import { MASTER_SYSTEM_PROMPT } from '@/lib/master-prompt';
 import { normalizeState, parseLooseJson, splitTaggedBlock } from '@/lib/state';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
@@ -38,8 +38,7 @@ export async function POST(req: Request) {
     const enrichedPrompt = `${userMessage}\n\n<USER_STATE>\n${JSON.stringify(currentState, null, 2)}\n</USER_STATE>`;
 
     // 3. Gemini aanroepen met de Master Prompt
-    const response = await getGemini().models.generateContent({
-      model: GEMINI_MODEL,
+    const response = await generateWithFallback({
       contents: [
         ...history.map((m) => ({ role: m.role as 'user' | 'model', parts: [{ text: m.content }] })),
         { role: 'user', parts: [{ text: enrichedPrompt }] },
@@ -79,7 +78,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ reply: visibleReply, state: updatedState, stateWarning });
   } catch (e) {
     console.error('/api/chat fout:', e);
-    return NextResponse.json({ error: 'Er ging iets mis bij de mentor. Probeer het opnieuw.' }, { status: 500 });
+    return NextResponse.json({ error: describeGeminiError(e) }, { status: 500 });
   }
 }
 
