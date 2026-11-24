@@ -70,4 +70,5 @@ export const INITIAL_STATE: CismState = {
       completed: true,
     },
   ],
+  progress_history: [{ date: '2026-11-24', readiness: 31, d1: 45, d2: 33, d3: 25, d4: 28 }],
 };

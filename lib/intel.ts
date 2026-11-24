@@ -2,12 +2,9 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { generateWithFallback } from './gemini';
 import { MASTER_SYSTEM_PROMPT } from './master-prompt';
-import { DOMAIN_KEYS, parseLooseJson, splitTaggedBlock } from './state';
+import { DOMAIN_KEYS, parseLooseJson, splitTaggedBlock, stateForModel, todayInAmsterdam } from './state';
 import { getOrCreateState, saveState } from './user-state';
 import type { IntelLogEntry } from './types';
-
-const todayInAmsterdam = () =>
-  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date()); // YYYY-MM-DD
 
 function buildPrompt(stateJson: string) {
   return `
@@ -39,7 +36,7 @@ export async function generateWeeklyBriefing(supabase: SupabaseClient, userId: s
   const state = await getOrCreateState(supabase, userId);
 
   const response = await generateWithFallback({
-    contents: buildPrompt(JSON.stringify(state, null, 2)),
+    contents: buildPrompt(JSON.stringify(stateForModel(state), null, 2)),
     config: {
       systemInstruction: MASTER_SYSTEM_PROMPT,
       tools: [{ googleSearch: {} }],

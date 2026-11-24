@@ -115,10 +115,36 @@ export function normalizeState(candidate: unknown, previous: CismState): CismSta
     },
     // Het intel-log wordt door de server (cron) gevuld; de chat mag alleen
     // een bestaand item als 'completed' markeren (na overhoring).
+    progress_history: previous.progress_history ?? [],
     weekly_intel_log: previous.weekly_intel_log.map((entry) => {
       const cLog = Array.isArray(c.weekly_intel_log) ? c.weekly_intel_log : [];
       const hit = cLog.find((x: any) => x && x.date === entry.date && x.topic === entry.topic);
       return hit && hit.completed === true ? { ...entry, completed: true } : entry;
     }),
   };
+}
+
+export const todayInAmsterdam = () =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date()); // YYYY-MM-DD
+
+/** Zet het meetpunt van vandaag (overschrijft een eerder punt van dezelfde dag). Max. 120 punten. */
+export function withTodaySnapshot(state: CismState): CismState {
+  const d = state.domains;
+  const point = {
+    date: todayInAmsterdam(),
+    readiness: state.user_profile.overall_readiness_score,
+    d1: d.domain_1_governance.mastery_score,
+    d2: d.domain_2_risk_management.mastery_score,
+    d3: d.domain_3_security_program.mastery_score,
+    d4: d.domain_4_incident_management.mastery_score,
+  };
+  const history = (state.progress_history ?? []).filter((p) => p.date !== point.date);
+  return { ...state, progress_history: [...history, point].slice(-120) };
+}
+
+/** De state zoals het model hem ziet: zonder de (lange) voortgangshistorie. */
+export function stateForModel(state: CismState): Omit<CismState, 'progress_history'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { progress_history, ...rest } = state;
+  return rest;
 }

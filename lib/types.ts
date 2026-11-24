@@ -36,6 +36,17 @@ export interface CismState {
     recent_blind_spots: string[];
   };
   weekly_intel_log: IntelLogEntry[];
+  /** Eén meetpunt per dag, voor de voortgangsgrafiek. Wordt niet naar het model gestuurd. */
+  progress_history?: ProgressPoint[];
+}
+
+export interface ProgressPoint {
+  date: string; // YYYY-MM-DD (Amsterdam)
+  readiness: number;
+  d1: number;
+  d2: number;
+  d3: number;
+  d4: number;
 }
 
 export interface Briefing {
