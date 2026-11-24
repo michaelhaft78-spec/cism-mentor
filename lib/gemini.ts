@@ -11,11 +11,45 @@ export function getGemini() {
 }
 
 /**
- * Modellen in volgorde van voorkeur. `gemini-flash-latest` is Googles alias die
- * altijd naar het actuele Flash-model wijst, zodat de app niet stukgaat als een
- * vaste versie (zoals gemini-2.5-flash) wordt uitgefaseerd.
+ * Kiest automatisch een werkend model. Google faseert modellen regelmatig uit
+ * (zo gaf gemini-2.5-flash een 404), dus we vragen de lijst met beschikbare
+ * modellen op bij Google en nemen het nieuwste stabiele Flash-model.
+ * Met GEMINI_MODEL in Vercel kun je een vast model afdwingen.
  */
-const MODELS = [...new Set([process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash'].filter(Boolean))] as string[];
+let discovered: string[] | null = null;
+
+const versionOf = (name: string) => {
+  const m = name.match(/gemini-(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : 0;
+};
+
+async function discoverModels(): Promise<string[]> {
+  if (discovered) return discovered;
+  const names: string[] = [];
+  try {
+    const pager = await getGemini().models.list();
+    for await (const m of pager) {
+      const name = (m.name ?? '').replace(/^models\//, '');
+      if (!name.startsWith('gemini-')) continue;
+      if (m.supportedActions && !m.supportedActions.includes('generateContent')) continue;
+      if (/lite|image|tts|audio|live|embedding|robotics|computer-use|thinking-exp|learnlm/i.test(name)) continue;
+      names.push(name);
+    }
+  } catch (e) {
+    console.error('Modellen ophalen mislukt:', e);
+  }
+  // Voorkeur: flash boven pro (sneller/goedkoper), stabiel boven preview/exp, hogere versie eerst.
+  const score = (n: string) =>
+    (/flash/.test(n) ? 1000 : 0) + (/preview|exp/.test(n) ? 0 : 500) + versionOf(n);
+  names.sort((a, b) => score(b) - score(a));
+  discovered = names;
+  return names;
+}
+
+async function candidateModels(): Promise<string[]> {
+  const list = [process.env.GEMINI_MODEL, ...(await discoverModels()), 'gemini-flash-latest'];
+  return [...new Set(list.filter(Boolean))].slice(0, 6) as string[];
+}
 
 const isModelUnavailable = (e: unknown) =>
   /404|not[ _]found|no longer available|is not supported|deprecated/i.test(String((e as Error)?.message ?? e));
@@ -23,9 +57,11 @@ const isModelUnavailable = (e: unknown) =>
 /** generateContent met automatische terugval naar het volgende model als een model niet (meer) bestaat. */
 export async function generateWithFallback(params: Omit<GenerateContentParameters, 'model'>) {
   let lastError: unknown;
-  for (const model of MODELS) {
+  for (const model of await candidateModels()) {
     try {
-      return await getGemini().models.generateContent({ ...params, model });
+      const res = await getGemini().models.generateContent({ ...params, model });
+      if (discovered && discovered[0] !== model) discovered = [model, ...discovered.filter((n) => n !== model)];
+      return res;
     } catch (e) {
       lastError = e;
       if (!isModelUnavailable(e)) break;
@@ -43,6 +79,6 @@ export function describeGeminiError(e: unknown): string {
     return 'De Gemini API-key is ongeldig. Controleer GEMINI_API_KEY in Vercel en doe een Redeploy.';
   if (/429|quota|rate limit|RESOURCE_EXHAUSTED/i.test(msg))
     return 'Het Gemini-tegoed of de limiet per minuut is bereikt. Wacht even en probeer het opnieuw.';
-  if (isModelUnavailable(e)) return 'Het Gemini-model is niet beschikbaar. Stel GEMINI_MODEL in Vercel in op een actueel model.';
+  if (isModelUnavailable(e)) return `Geen bruikbaar Gemini-model gevonden. Details: ${msg.slice(0, 300)}`;
   return `Gemini gaf een fout: ${msg.slice(0, 300)}`;
 }
