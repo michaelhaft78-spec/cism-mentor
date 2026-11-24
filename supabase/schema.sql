@@ -33,6 +33,13 @@ create table if not exists public.chat_messages (
 create index if not exists chat_messages_user_created_idx
   on public.chat_messages (user_id, created_at desc);
 
+-- Rechten voor ingelogde gebruikers (nieuwere Supabase-projecten geven die niet automatisch)
+grant usage on schema public to authenticated, service_role;
+grant select, insert, update on public.user_cism_state to authenticated;
+grant select, insert on public.weekly_intel_briefings to authenticated;
+grant select, insert, delete on public.chat_messages to authenticated;
+grant all on public.user_cism_state, public.weekly_intel_briefings, public.chat_messages to service_role;
+
 -- =====================================================================
 -- Row Level Security: elke gebruiker ziet en wijzigt alleen eigen rijen.
 -- (De cron-job gebruikt de service role key en omzeilt RLS bewust.)
