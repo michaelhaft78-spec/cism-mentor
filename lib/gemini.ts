@@ -54,19 +54,37 @@ async function candidateModels(): Promise<string[]> {
 const isModelUnavailable = (e: unknown) =>
   /404|not[ _]found|no longer available|is not supported|deprecated/i.test(String((e as Error)?.message ?? e));
 
-/** generateContent met automatische terugval naar het volgende model als een model niet (meer) bestaat. */
+const isOverloaded = (e: unknown) =>
+  /503|UNAVAILABLE|high demand|overloaded|try again later/i.test(String((e as Error)?.message ?? e));
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * generateContent met terugval: bestaat een model niet (meer) of is het overbelast
+ * (503), dan proberen we het (na een korte pauze) met het volgende model.
+ */
 export async function generateWithFallback(params: Omit<GenerateContentParameters, 'model'>) {
   let lastError: unknown;
-  for (const model of await candidateModels()) {
-    try {
-      const res = await getGemini().models.generateContent({ ...params, model });
-      if (discovered && discovered[0] !== model) discovered = [model, ...discovered.filter((n) => n !== model)];
-      return res;
-    } catch (e) {
-      lastError = e;
-      if (!isModelUnavailable(e)) break;
-      console.warn(`Gemini-model ${model} niet beschikbaar, probeer volgende.`);
+  const models = await candidateModels();
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await getGemini().models.generateContent({ ...params, model });
+        if (discovered && discovered[0] !== model) discovered = [model, ...discovered.filter((n) => n !== model)];
+        return res;
+      } catch (e) {
+        lastError = e;
+        if (isOverloaded(e) && attempt === 0) {
+          console.warn(`Gemini-model ${model} overbelast, nieuwe poging over 2 s.`);
+          await sleep(2000);
+          continue;
+        }
+        break;
+      }
     }
+    if (!isModelUnavailable(lastError) && !isOverloaded(lastError)) break;
+    console.warn(`Gemini-model ${model} werkt nu niet, probeer volgende.`);
   }
   throw lastError;
 }
@@ -79,6 +97,8 @@ export function describeGeminiError(e: unknown): string {
     return 'De Gemini API-key is ongeldig. Controleer GEMINI_API_KEY in Vercel en doe een Redeploy.';
   if (/429|quota|rate limit|RESOURCE_EXHAUSTED/i.test(msg))
     return 'Het Gemini-tegoed of de limiet per minuut is bereikt. Wacht even en probeer het opnieuw.';
+  if (isOverloaded(e))
+    return 'Google Gemini is op dit moment overbelast (dat ligt niet aan jou of de app). Probeer het over een minuutje opnieuw.';
   if (isModelUnavailable(e)) return `Geen bruikbaar Gemini-model gevonden. Details: ${msg.slice(0, 300)}`;
   return `Gemini gaf een fout: ${msg.slice(0, 300)}`;
 }
