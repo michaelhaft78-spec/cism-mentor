@@ -23,6 +23,8 @@ export async function getOrCreateState(supabase: SupabaseClient, userId: string)
       domains,
       error_analytics: { ...INITIAL_STATE.error_analytics, ...(stored.error_analytics ?? {}) },
       weekly_intel_log: Array.isArray(stored.weekly_intel_log) ? stored.weekly_intel_log : [],
+      progress_history: Array.isArray(stored.progress_history) ? stored.progress_history : [],
+      mistake_log: Array.isArray(stored.mistake_log) ? stored.mistake_log : [],
     };
     return normalizeState(base, base);
   }

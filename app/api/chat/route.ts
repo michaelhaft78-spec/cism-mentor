@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { describeGeminiError, generateWithFallback } from '@/lib/gemini';
 import { MASTER_SYSTEM_PROMPT } from '@/lib/master-prompt';
-import { normalizeState, parseLooseJson, splitTaggedBlock } from '@/lib/state';
+import {
+  normalizeState,
+  parseLooseJson,
+  splitTaggedBlock,
+  stateForModel,
+  withMistakeFromUpdate,
+  withTodaySnapshot,
+} from '@/lib/state';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getOrCreateState, saveState } from '@/lib/user-state';
 
@@ -35,7 +42,7 @@ export async function POST(req: Request) {
     const history = (historyRows ?? []).reverse();
 
     // 2. State onder het nieuwe bericht injecteren
-    const enrichedPrompt = `${userMessage}\n\n<USER_STATE>\n${JSON.stringify(currentState, null, 2)}\n</USER_STATE>`;
+    const enrichedPrompt = `${userMessage}\n\n<USER_STATE>\n${JSON.stringify(stateForModel(currentState), null, 2)}\n</USER_STATE>`;
 
     // 3. Gemini aanroepen met de Master Prompt
     const response = await generateWithFallback({
@@ -59,7 +66,8 @@ export async function POST(req: Request) {
     let stateWarning: string | null = null;
     if (block) {
       try {
-        updatedState = normalizeState(parseLooseJson(block), currentState);
+        const parsed = parseLooseJson(block);
+        updatedState = withMistakeFromUpdate(withTodaySnapshot(normalizeState(parsed, currentState)), parsed);
       } catch (e) {
         console.error('STATE_UPDATE kon niet worden geparsed:', e, block.slice(0, 500));
         stateWarning = 'De voortgang kon deze keer niet worden bijgewerkt (ongeldige JSON van het model). Je vorige stand is bewaard.';

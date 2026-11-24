@@ -36,6 +36,32 @@ export interface CismState {
     recent_blind_spots: string[];
   };
   weekly_intel_log: IntelLogEntry[];
+  /** Eén meetpunt per dag, voor de voortgangsgrafiek. Wordt niet naar het model gestuurd. */
+  progress_history?: ProgressPoint[];
+  /** Logboek van fout beantwoorde oefenvragen (foutenanalyse). Wordt niet naar het model gestuurd. */
+  mistake_log?: MistakeEntry[];
+}
+
+export type ErrorType = 'technical_reflex' | 'definition_knowledge' | 'misread_keyword' | 'other';
+
+export interface MistakeEntry {
+  date: string; // YYYY-MM-DD
+  domain: DomainKey | string;
+  topic: string;
+  error_type: ErrorType;
+  question: string; // korte samenvatting van de vraag
+  your_answer?: string;
+  correct_answer?: string;
+  lesson: string; // de ISACA-les in één of twee zinnen
+}
+
+export interface ProgressPoint {
+  date: string; // YYYY-MM-DD (Amsterdam)
+  readiness: number;
+  d1: number;
+  d2: number;
+  d3: number;
+  d4: number;
 }
 
 export interface Briefing {

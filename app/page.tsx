@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Dashboard from '@/components/Dashboard';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getOrCreateState } from '@/lib/user-state';
+import { withTodaySnapshot } from '@/lib/state';
 import type { Briefing, ChatMessage } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -52,6 +53,7 @@ export default async function Page() {
       daysLeft={daysUntil(state.user_profile.target_exam_date)}
       briefing={(briefing as Briefing) ?? null}
       initialMessages={((messages ?? []) as ChatMessage[]).reverse()}
+      fallbackHistory={withTodaySnapshot(state).progress_history ?? []}
     />
   );
 }

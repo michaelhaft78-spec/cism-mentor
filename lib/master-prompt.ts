@@ -59,4 +59,7 @@ Bij elke interactie ontvang je onder \`<USER_STATE>\` de actuele voortgangsdata 
 - Het JSON-object in <STATE_UPDATE> is altijd het VOLLEDIGE object (alle velden uit <USER_STATE>, ook ongewijzigde), puur JSON zonder \`\`\`-codeblok en zonder commentaar.
 - Verander \`questions_attempted\` / \`questions_correct\` alleen als de gebruiker daadwerkelijk een oefenvraag heeft beantwoord.
 - Stel je een nieuwe oefenvraag, eindig de zichtbare tekst dan met de vraag en wacht op het antwoord; beoordeel het antwoord pas in het volgende bericht.
+- FOUTENANALYSE: heb je in dit bericht een antwoord van de gebruiker op een oefenvraag beoordeeld, voeg dan in het JSON-object een extra veld "last_answer" toe:
+  {"correct": true|false, "domain": "domain_1_governance" | "domain_2_risk_management" | "domain_3_security_program" | "domain_4_incident_management", "topic": "kort onderwerp", "error_type": "technical_reflex" | "definition_knowledge" | "misread_keyword" | "other", "question": "samenvatting van de vraag in max. 2 zinnen", "your_answer": "wat de gebruiker koos", "correct_answer": "het juiste antwoord", "lesson": "de ISACA-les in max. 2 zinnen"}
+  Laat "last_answer" weg als je geen antwoord hebt beoordeeld.
 `.trim();

@@ -3,7 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import { DOMAIN_KEYS } from '@/lib/state';
-import type { Briefing, ChatMessage, CismState } from '@/lib/types';
+import type { Briefing, ChatMessage, CismState, DomainKey, ProgressPoint } from '@/lib/types';
+import { DomainRadar, ErrorBars, GainBars, ReadinessTrend, TARGET } from './charts';
+import ThemeToggle from './ThemeToggle';
+import MistakeAnalysis from './MistakeAnalysis';
+import KnowledgeBase from './KnowledgeBase';
 
 interface Props {
   email: string;
@@ -11,6 +15,7 @@ interface Props {
   daysLeft: number | null;
   briefing: Briefing | null;
   initialMessages: ChatMessage[];
+  fallbackHistory: ProgressPoint[];
 }
 
 /** Leest het antwoord veilig: Vercel geeft bij een time-out platte tekst i.p.v. JSON. */
@@ -32,7 +37,7 @@ const DOMAIN_SHORT: Record<string, string> = {
   domain_4_incident_management: 'D4',
 };
 
-export default function Dashboard({ email, initialState, daysLeft, briefing, initialMessages }: Props) {
+export default function Dashboard({ email, initialState, daysLeft, briefing, initialMessages, fallbackHistory }: Props) {
   const router = useRouter();
   const [state, setState] = useState(initialState);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -40,6 +45,9 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [intelBusy, setIntelBusy] = useState(false);
+  const [tab, setTab] = useState<'overzicht' | 'fouten' | 'kennis'>('overzicht');
+  const [editDate, setEditDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState(initialState.user_profile.target_exam_date);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLElement>(null);
 
@@ -73,6 +81,23 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
     }
   }
 
+  async function saveExamDate() {
+    setNotice(null);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_exam_date: dateDraft }),
+      });
+      const data = await readJson(res);
+      if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+      setState(data.state);
+      setEditDate(false);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Opslaan mislukt.');
+    }
+  }
+
   async function newConversation() {
     if (busy) return;
     await fetch('/api/chat', { method: 'DELETE' });
@@ -97,109 +122,169 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
 
   const readiness = state.user_profile.overall_readiness_score;
   const ea = state.error_analytics;
-  const totalErrors = ea.technical_reflex_errors + ea.definition_knowledge_errors + ea.misread_keyword_errors || 1;
-  const mindset = [
-    { label: 'Technische reflex', value: ea.technical_reflex_errors, cls: 'bar-red' },
-    { label: 'Definitiekennis', value: ea.definition_knowledge_errors, cls: 'bar-amber' },
-    { label: 'Sleutelwoord gemist', value: ea.misread_keyword_errors, cls: 'bar-blue' },
-  ];
+  const focusKey = state.user_profile.current_focus_domain as DomainKey;
+  const focus = state.domains[focusKey];
+  const attempted = DOMAIN_KEYS.reduce((s, k) => s + state.domains[k].questions_attempted, 0);
+  const correct = DOMAIN_KEYS.reduce((s, k) => s + state.domains[k].questions_correct, 0);
+  const history = state.progress_history?.length ? state.progress_history : fallbackHistory;
+  const days = daysUntil(state.user_profile.target_exam_date) ?? daysLeft;
+  const examLabel = new Date(`${state.user_profile.target_exam_date}T00:00:00Z`).toLocaleDateString('nl-NL', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'UTC',
+  });
 
   return (
-    <main className="page">
-      {/* 1. Bovenbalk: readiness + afteller */}
-      <header className="card topbar">
-        <div className="gauge" style={{ ['--pct' as string]: `${readiness}` }}>
-          <div className="gauge-inner">
-            <span className="gauge-num">{readiness}%</span>
-            <span className="gauge-label">readiness</span>
+    <>
+      {/* 1. Hero: altijd donker, de rest volgt het thema (hybride) */}
+      <header className="hero">
+        <div className="hero-inner">
+          <nav className="nav">
+            <div className="brand">
+              <span className="brand-mark" aria-hidden="true">◆</span> CISM Mentor
+            </div>
+            <div className="nav-right">
+              <ThemeToggle />
+              <form action="/auth/signout" method="post">
+                <button className="chip" type="submit" title={email}>
+                  Uitloggen
+                </button>
+              </form>
+            </div>
+          </nav>
+
+          <div className="hero-main">
+            <div className="gauge" style={{ ['--pct' as string]: `${readiness}` }}>
+              <div className="gauge-inner">
+                <span className="gauge-num">{readiness}%</span>
+                <span className="gauge-label">readiness</span>
+              </div>
+            </div>
+            <div className="hero-text">
+              <p className="eyebrow">Van 0 naar 100</p>
+              <h1>Jouw weg naar het CISM-examen</h1>
+              <p className="hero-sub">
+                Nog {Math.max(0, TARGET - readiness)} punten tot examenniveau. Grootste winst nu:{' '}
+                <strong>{biggestGain(state)}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="tiles">
+            <div className="tile">
+              <span className="tile-label">
+                Examen
+                {!editDate && (
+                  <button className="tile-edit" onClick={() => setEditDate(true)} title="Examendatum wijzigen">
+                    wijzig
+                  </button>
+                )}
+              </span>
+              {editDate ? (
+                <form
+                  className="date-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveExamDate();
+                  }}
+                >
+                  <input
+                    type="date"
+                    value={dateDraft}
+                    onChange={(e) => setDateDraft(e.target.value)}
+                    required
+                    aria-label="Examendatum"
+                  />
+                  <div className="date-actions">
+                    <button type="submit" className="chip chip-solid">
+                      Opslaan
+                    </button>
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => {
+                        setEditDate(false);
+                        setDateDraft(state.user_profile.target_exam_date);
+                      }}
+                    >
+                      Annuleer
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <span className="tile-value">
+                    {days === null ? '—' : days > 0 ? `${days} dagen` : days === 0 ? 'Vandaag!' : 'Geweest'}
+                  </span>
+                  <span className="tile-sub">{examLabel}</span>
+                </>
+              )}
+            </div>
+            <div className="tile">
+              <span className="tile-label">Geoefend</span>
+              <span className="tile-value">{attempted} vragen</span>
+              <span className="tile-sub">{attempted ? Math.round((correct / attempted) * 100) : 0}% goed</span>
+            </div>
+            <div className="tile">
+              <span className="tile-label">Focus</span>
+              <span className="tile-value">{DOMAIN_SHORT[focusKey] ?? '—'}</span>
+              <span className="tile-sub">{focus?.name ?? state.user_profile.current_focus_domain}</span>
+            </div>
+            <div className="tile">
+              <span className="tile-label">Technische reflex</span>
+              <span className="tile-value">{ea.technical_reflex_errors}×</span>
+              <span className="tile-sub">moet naar nul</span>
+            </div>
           </div>
         </div>
-        <div className="topbar-text">
-          <h1>CISM Mentor</h1>
-          <p>
-            Examen op <strong>{state.user_profile.target_exam_date}</strong>
-            {daysLeft !== null && (
-              <>
-                {' '}
-                · nog <strong>{daysLeft} dagen</strong>
-              </>
-            )}
-          </p>
-          <p className="muted">
-            Focus: {DOMAIN_SHORT[state.user_profile.current_focus_domain] ?? ''}{' '}
-            {state.domains[state.user_profile.current_focus_domain as keyof CismState['domains']]?.name ??
-              state.user_profile.current_focus_domain}
-          </p>
-        </div>
-        <form action="/auth/signout" method="post" className="signout">
-          <span className="muted small">{email}</span>
-          <button className="ghost" type="submit">
-            Uitloggen
-          </button>
-        </form>
       </header>
 
-      <div className="grid">
-        {/* 2. Linker kolom: de 4 domeinen */}
-        <section className="card">
-          <h2>De 4 CISM-domeinen</h2>
-          {DOMAIN_KEYS.map((key) => {
-            const d = state.domains[key];
-            const pct = d.questions_attempted ? Math.round((d.questions_correct / d.questions_attempted) * 100) : 0;
-            return (
-              <div key={key} className="domain">
-                <div className="domain-head">
-                  <span>
-                    <strong>{DOMAIN_SHORT[key]}</strong> {d.name}{' '}
-                    <span className="muted small">({d.weight_percentage}%)</span>
-                  </span>
-                  <span className="score">{d.mastery_score}</span>
-                </div>
-                <div className="bar">
-                  <div className="bar-fill" style={{ width: `${d.mastery_score}%` }} />
-                </div>
-                <div className="muted small">
-                  {d.phase} · {d.questions_correct}/{d.questions_attempted} goed ({pct}%)
-                </div>
-                <div className="badges">
-                  {d.weak_topics.map((t) => (
-                    <button
-                      key={t}
-                      className="badge weak"
-                      disabled={busy}
-                      title="Train mij hierop"
-                      onClick={() => send(`Train mij op ${t} in Modus 1`)}
-                    >
-                      {t} →
-                    </button>
-                  ))}
-                  {d.mastered_topics.map((t) => (
-                    <span key={t} className="badge mastered">
-                      ✓ {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </section>
+      <main className="page">
+        <nav className="tabs" aria-label="Onderdelen">
+          {(
+            [
+              ['overzicht', 'Overzicht'],
+              ['fouten', `Foutenanalyse${state.mistake_log?.length ? ` (${state.mistake_log.length})` : ''}`],
+              ['kennis', 'Kennisbank'],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={tab === k}>
+              {label}
+            </button>
+          ))}
+        </nav>
 
-        {/* 3. Rechter kolom: mindset + blind spots + intel */}
-        <div className="col">
+        {tab === 'fouten' && <MistakeAnalysis state={state} busy={busy} onPractice={send} />}
+        {tab === 'kennis' && <KnowledgeBase busy={busy} onAsk={send} />}
+
+        {tab === 'overzicht' && (
+        <>
+        {/* 2. Visualisaties */}
+        <div className="grid grid-viz">
+          <section className="card">
+            <h2>Beheersing per domein</h2>
+            <p className="card-sub">De stippellijn is examenniveau (70). Hoe dichter je lijn daarbij komt, hoe beter.</p>
+            <DomainRadar state={state} />
+          </section>
+          <section className="card">
+            <h2>Readiness over tijd</h2>
+            <p className="card-sub">Je gewogen score per dag, richting de examendatum.</p>
+            <ReadinessTrend history={history} examDate={state.user_profile.target_exam_date} />
+          </section>
+        </div>
+
+        <div className="grid">
+          <section className="card">
+            <h2>Waar win je de meeste punten?</h2>
+            <p className="card-sub">
+              Readiness-punten die je wint als een domein examenniveau ({TARGET}) haalt: gewicht × wat je nog mist.
+            </p>
+            <GainBars state={state} />
+          </section>
           <section className="card">
             <h2>Mindset-meter</h2>
-            <p className="muted small">
-              Denk je nog als techneut? Technische-reflexfouten horen naar nul te gaan.
-            </p>
-            {mindset.map((m) => (
-              <div key={m.label} className="mindset-row">
-                <span>{m.label}</span>
-                <div className="bar small-bar">
-                  <div className={`bar-fill ${m.cls}`} style={{ width: `${(m.value / totalErrors) * 100}%` }} />
-                </div>
-                <span className="score">{m.value}</span>
-              </div>
-            ))}
+            <p className="card-sub">Welk type fout maak je? Technische-reflexfouten horen naar nul te gaan.</p>
+            <ErrorBars state={state} />
             <h3>Blind spots</h3>
             <ul className="blindspots">
               {ea.recent_blind_spots.map((b, i) => (
@@ -207,12 +292,60 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
               ))}
             </ul>
           </section>
+        </div>
+
+        {/* 3. Domeinen + intel */}
+        <div className="grid">
+          <section className="card">
+            <h2>De 4 CISM-domeinen</h2>
+            <p className="card-sub">Klik op een rood onderwerp om er direct op te trainen.</p>
+            {DOMAIN_KEYS.map((key) => {
+              const d = state.domains[key];
+              const pct = d.questions_attempted ? Math.round((d.questions_correct / d.questions_attempted) * 100) : 0;
+              return (
+                <div key={key} className="domain">
+                  <div className="domain-head">
+                    <span>
+                      <strong>{DOMAIN_SHORT[key]}</strong> {d.name}{' '}
+                      <span className="muted small">({d.weight_percentage}%)</span>
+                    </span>
+                    <span className="score">{d.mastery_score}</span>
+                  </div>
+                  <div className="track" title={`${d.mastery_score} van 100, examenniveau ${TARGET}`}>
+                    <div className="fill viz-s1" style={{ width: `${d.mastery_score}%` }} />
+                    <span className="track-target" style={{ left: `${TARGET}%` }} />
+                  </div>
+                  <div className="muted small">
+                    {d.phase} · {d.questions_correct}/{d.questions_attempted} goed ({pct}%)
+                  </div>
+                  <div className="badges">
+                    {d.weak_topics.map((t) => (
+                      <button
+                        key={t}
+                        className="badge weak"
+                        disabled={busy}
+                        title="Train mij hierop"
+                        onClick={() => send(`Train mij op ${t} in Modus 1`)}
+                      >
+                        {t} →
+                      </button>
+                    ))}
+                    {d.mastered_topics.map((t) => (
+                      <span key={t} className="badge mastered">
+                        ✓ {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
 
           <section className="card">
             <div className="card-head">
               <h2>Wekelijkse intel</h2>
               <button className="ghost" onClick={generateBriefing} disabled={intelBusy}>
-                {intelBusy ? 'Bezig (±30 s)…' : 'Genereer nu'}
+                {intelBusy ? 'Bezig (±1 min)…' : 'Genereer nu'}
               </button>
             </div>
             {briefing ? (
@@ -254,7 +387,9 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
             )}
           </section>
         </div>
-      </div>
+
+        </>
+        )}
 
       {/* Chat met de mentor */}
       <section className="card chat" ref={chatRef}>
@@ -320,6 +455,27 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
           </button>
         </form>
       </section>
-    </main>
+      </main>
+    </>
   );
+}
+
+function daysUntil(dateStr: string): number | null {
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date());
+  const ms = Date.parse(`${dateStr}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(ms) ? Math.round(ms / 86_400_000) : null;
+}
+
+function biggestGain(state: CismState) {
+  let best = DOMAIN_KEYS[0];
+  let bestGain = -1;
+  for (const k of DOMAIN_KEYS) {
+    const d = state.domains[k];
+    const g = d.weight_percentage * Math.max(0, TARGET - d.mastery_score);
+    if (g > bestGain) {
+      bestGain = g;
+      best = k;
+    }
+  }
+  return `${DOMAIN_SHORT[best]} ${state.domains[best].name}`;
 }

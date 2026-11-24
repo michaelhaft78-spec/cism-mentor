@@ -1,4 +1,4 @@
-import type { CismState, DomainKey, DomainState } from './types';
+import type { CismState, DomainKey, DomainState, MistakeEntry } from './types';
 
 export const DOMAIN_KEYS: DomainKey[] = [
   'domain_1_governance',
@@ -115,10 +115,60 @@ export function normalizeState(candidate: unknown, previous: CismState): CismSta
     },
     // Het intel-log wordt door de server (cron) gevuld; de chat mag alleen
     // een bestaand item als 'completed' markeren (na overhoring).
+    progress_history: previous.progress_history ?? [],
+    mistake_log: previous.mistake_log ?? [],
     weekly_intel_log: previous.weekly_intel_log.map((entry) => {
       const cLog = Array.isArray(c.weekly_intel_log) ? c.weekly_intel_log : [];
       const hit = cLog.find((x: any) => x && x.date === entry.date && x.topic === entry.topic);
       return hit && hit.completed === true ? { ...entry, completed: true } : entry;
     }),
   };
+}
+
+export const todayInAmsterdam = () =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date()); // YYYY-MM-DD
+
+/** Zet het meetpunt van vandaag (overschrijft een eerder punt van dezelfde dag). Max. 120 punten. */
+export function withTodaySnapshot(state: CismState): CismState {
+  const d = state.domains;
+  const point = {
+    date: todayInAmsterdam(),
+    readiness: state.user_profile.overall_readiness_score,
+    d1: d.domain_1_governance.mastery_score,
+    d2: d.domain_2_risk_management.mastery_score,
+    d3: d.domain_3_security_program.mastery_score,
+    d4: d.domain_4_incident_management.mastery_score,
+  };
+  const history = (state.progress_history ?? []).filter((p) => p.date !== point.date);
+  return { ...state, progress_history: [...history, point].slice(-120) };
+}
+
+/** De state zoals het model hem ziet: zonder de (lange) voortgangshistorie. */
+export function stateForModel(state: CismState): Omit<CismState, 'progress_history' | 'mistake_log'> {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { progress_history, mistake_log, ...rest } = state;
+  return rest;
+}
+
+const ERROR_TYPES = ['technical_reflex', 'definition_knowledge', 'misread_keyword', 'other'] as const;
+const str = (v: unknown, max = 600) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+
+/**
+ * Leest het optionele "last_answer"-object uit de STATE_UPDATE. Is het antwoord fout,
+ * dan komt het in de foutenanalyse (max. 300 items).
+ */
+export function withMistakeFromUpdate(state: CismState, parsed: unknown): CismState {
+  const la = (parsed as any)?.last_answer;
+  if (!la || typeof la !== 'object' || la.correct !== false) return state;
+  const entry: MistakeEntry = {
+    date: todayInAmsterdam(),
+    domain: DOMAIN_KEYS.includes(la.domain) ? la.domain : state.user_profile.current_focus_domain,
+    topic: str(la.topic, 120) || 'Onbekend onderwerp',
+    error_type: (ERROR_TYPES as readonly string[]).includes(la.error_type) ? la.error_type : 'other',
+    question: str(la.question) || '(geen samenvatting)',
+    your_answer: str(la.your_answer, 300) || undefined,
+    correct_answer: str(la.correct_answer, 300) || undefined,
+    lesson: str(la.lesson) || '',
+  };
+  return { ...state, mistake_log: [...(state.mistake_log ?? []), entry].slice(-300) };
 }
