@@ -25,6 +25,13 @@ export async function getOrCreateState(supabase: SupabaseClient, userId: string)
       weekly_intel_log: Array.isArray(stored.weekly_intel_log) ? stored.weekly_intel_log : [],
       progress_history: Array.isArray(stored.progress_history) ? stored.progress_history : [],
       mistake_log: Array.isArray(stored.mistake_log) ? stored.mistake_log : [],
+      quiz_progress:
+        stored.quiz_progress && typeof stored.quiz_progress === 'object'
+          ? {
+              results: stored.quiz_progress.results ?? {},
+              topic_streaks: stored.quiz_progress.topic_streaks ?? {},
+            }
+          : { results: {}, topic_streaks: {} },
     };
     return normalizeState(base, base);
   }

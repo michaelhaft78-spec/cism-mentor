@@ -40,6 +40,15 @@ export interface CismState {
   progress_history?: ProgressPoint[];
   /** Logboek van fout beantwoorde oefenvragen (foutenanalyse). Wordt niet naar het model gestuurd. */
   mistake_log?: MistakeEntry[];
+  /** Voortgang in de meerkeuzevragen (offline vragenbank). Wordt niet naar het model gestuurd. */
+  quiz_progress?: QuizProgress;
+}
+
+export interface QuizProgress {
+  /** Laatste uitkomst per vraag-id: true = goed. */
+  results: Record<string, boolean>;
+  /** Aantal keer achter elkaar goed per onderwerp (3 = beheerst). */
+  topic_streaks: Record<string, number>;
 }
 
 export type ErrorType = 'technical_reflex' | 'definition_knowledge' | 'misread_keyword' | 'other';

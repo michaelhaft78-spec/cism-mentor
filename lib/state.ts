@@ -117,6 +117,7 @@ export function normalizeState(candidate: unknown, previous: CismState): CismSta
     // een bestaand item als 'completed' markeren (na overhoring).
     progress_history: previous.progress_history ?? [],
     mistake_log: previous.mistake_log ?? [],
+    quiz_progress: previous.quiz_progress ?? { results: {}, topic_streaks: {} },
     weekly_intel_log: previous.weekly_intel_log.map((entry) => {
       const cLog = Array.isArray(c.weekly_intel_log) ? c.weekly_intel_log : [];
       const hit = cLog.find((x: any) => x && x.date === entry.date && x.topic === entry.topic);
@@ -144,9 +145,9 @@ export function withTodaySnapshot(state: CismState): CismState {
 }
 
 /** De state zoals het model hem ziet: zonder de (lange) voortgangshistorie. */
-export function stateForModel(state: CismState): Omit<CismState, 'progress_history' | 'mistake_log'> {
+export function stateForModel(state: CismState): Omit<CismState, 'progress_history' | 'mistake_log' | 'quiz_progress'> {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { progress_history, mistake_log, ...rest } = state;
+  const { progress_history, mistake_log, quiz_progress, ...rest } = state;
   return rest;
 }
 

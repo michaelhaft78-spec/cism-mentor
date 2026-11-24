@@ -32,24 +32,35 @@ async function discoverModels(): Promise<string[]> {
       const name = (m.name ?? '').replace(/^models\//, '');
       if (!name.startsWith('gemini-')) continue;
       if (m.supportedActions && !m.supportedActions.includes('generateContent')) continue;
-      if (/lite|image|tts|audio|live|embedding|robotics|computer-use|thinking-exp|learnlm/i.test(name)) continue;
+      if (/image|tts|audio|live|embedding|robotics|computer-use|thinking-exp|learnlm|gemma/i.test(name)) continue;
       names.push(name);
     }
   } catch (e) {
     console.error('Modellen ophalen mislukt:', e);
   }
   // Voorkeur: flash boven pro (sneller/goedkoper), stabiel boven preview/exp, hogere versie eerst.
+  // Flash-lite komt als reserve (ruimere gratis limiet) na de gewone flash-modellen.
   const score = (n: string) =>
-    (/flash/.test(n) ? 1000 : 0) + (/preview|exp/.test(n) ? 0 : 500) + versionOf(n);
+    (/flash/.test(n) && !/lite/.test(n) ? 2000 : /lite/.test(n) ? 1000 : 0) +
+    (/preview|exp/.test(n) ? 0 : 500) +
+    versionOf(n);
   names.sort((a, b) => score(b) - score(a));
   discovered = names;
   return names;
 }
 
+/** Modellen waarvan de limiet op is, tijdelijk overslaan (tot het tijdstip in ms). */
+const quotaBlockedUntil = new Map<string, number>();
+
 async function candidateModels(): Promise<string[]> {
-  const list = [process.env.GEMINI_MODEL, ...(await discoverModels()), 'gemini-flash-latest'];
-  return [...new Set(list.filter(Boolean))].slice(0, 6) as string[];
+  const list = [process.env.GEMINI_MODEL, ...(await discoverModels()), 'gemini-flash-latest', 'gemini-flash-lite-latest'];
+  const now = Date.now();
+  const all = [...new Set(list.filter(Boolean))] as string[];
+  const usable = all.filter((m) => (quotaBlockedUntil.get(m) ?? 0) < now);
+  return (usable.length ? usable : all).slice(0, 8);
 }
+
+const isQuota = (e: unknown) => /429|quota|rate limit|RESOURCE_EXHAUSTED/i.test(String((e as Error)?.message ?? e));
 
 const isModelUnavailable = (e: unknown) =>
   /404|not[ _]found|no longer available|is not supported|deprecated/i.test(String((e as Error)?.message ?? e));
@@ -83,6 +94,12 @@ export async function generateWithFallback(params: Omit<GenerateContentParameter
         break;
       }
     }
+    if (isQuota(lastError)) {
+      // Limieten gelden per model: probeer het volgende en sla dit model 10 minuten over.
+      quotaBlockedUntil.set(model, Date.now() + 10 * 60_000);
+      console.warn(`Gemini-model ${model}: limiet bereikt, probeer volgende.`);
+      continue;
+    }
     if (!isModelUnavailable(lastError) && !isOverloaded(lastError)) break;
     console.warn(`Gemini-model ${model} werkt nu niet, probeer volgende.`);
   }
@@ -96,7 +113,7 @@ export function describeGeminiError(e: unknown): string {
   if (/api key not valid|API_KEY_INVALID|permission denied|403/i.test(msg))
     return 'De Gemini API-key is ongeldig. Controleer GEMINI_API_KEY in Vercel en doe een Redeploy.';
   if (/429|quota|rate limit|RESOURCE_EXHAUSTED/i.test(msg))
-    return 'Het Gemini-tegoed of de limiet per minuut is bereikt. Wacht even en probeer het opnieuw.';
+    return 'De gratis Gemini-limiet is bij alle modellen bereikt. Oefen intussen met de meerkeuzevragen in het tabblad Oefenvragen: die werken zonder Gemini.';
   if (isOverloaded(e))
     return 'Google Gemini is op dit moment overbelast (dat ligt niet aan jou of de app). Probeer het over een minuutje opnieuw.';
   if (isModelUnavailable(e)) return `Geen bruikbaar Gemini-model gevonden. Details: ${msg.slice(0, 300)}`;
