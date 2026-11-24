@@ -59,7 +59,9 @@ Bedenk een lange willekeurige string (minstens 32 tekens), bijvoorbeeld via [een
 1. Terug in Supabase → **Authentication** → **URL Configuration**.
 2. **Site URL**: je Vercel-adres, bijv. `https://cism-mentor-xxxx.vercel.app`.
 3. **Redirect URLs** → **Add URL**: `https://cism-mentor-xxxx.vercel.app/auth/callback` (en eventueel `http://localhost:3000/auth/callback`).
-4. Open je Vercel-adres, vul je e-mailadres in en klik op de link in de mail. Je ziet nu je dashboard; je startstatus (readiness 31, focus D4) wordt automatisch aangemaakt.
+4. Maak je account aan: Supabase → **Authentication** → **Users** → **Add user** → **Create new user**. Vul je e-mailadres en een wachtwoord in, laat **Auto Confirm User** aangevinkt en klik **Create user**.
+5. Open je Vercel-adres en log in met dat e-mailadres en wachtwoord. Je ziet nu je dashboard; je startstatus (readiness 31, focus D4) wordt automatisch aangemaakt.
+   (Inloggen met een link per mail kan ook, maar Supabase verstuurt standaard maar een paar mails per uur.)
 
 ### Stap 6 · Afmaken: cron-gebruiker en afsluiten
 
