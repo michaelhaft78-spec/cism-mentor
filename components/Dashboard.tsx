@@ -8,6 +8,7 @@ import { DomainRadar, ErrorBars, GainBars, ReadinessTrend, TARGET } from './char
 import ThemeToggle from './ThemeToggle';
 import MistakeAnalysis from './MistakeAnalysis';
 import KnowledgeBase from './KnowledgeBase';
+import Practice from './Practice';
 
 interface Props {
   email: string;
@@ -45,7 +46,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [intelBusy, setIntelBusy] = useState(false);
-  const [tab, setTab] = useState<'overzicht' | 'fouten' | 'kennis'>('overzicht');
+  const [tab, setTab] = useState<'overzicht' | 'oefenen' | 'fouten' | 'kennis'>('overzicht');
   const [editDate, setEditDate] = useState(false);
   const [dateDraft, setDateDraft] = useState(initialState.user_profile.target_exam_date);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -244,6 +245,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
           {(
             [
               ['overzicht', 'Overzicht'],
+              ['oefenen', 'Oefenvragen'],
               ['fouten', `Foutenanalyse${state.mistake_log?.length ? ` (${state.mistake_log.length})` : ''}`],
               ['kennis', 'Kennisbank'],
             ] as const
@@ -254,6 +256,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
           ))}
         </nav>
 
+        {tab === 'oefenen' && <Practice state={state} onState={setState} />}
         {tab === 'fouten' && <MistakeAnalysis state={state} busy={busy} onPractice={send} />}
         {tab === 'kennis' && <KnowledgeBase busy={busy} onAsk={send} />}
 
