@@ -26,6 +26,8 @@
   --grid: #e6e9f0;
   --axis: #c9cfda;
   --ref: #8a93a6;
+  --heat-1: #cde2fb; --heat-2: #9ec5f4; --heat-3: #5598e7; --heat-4: #1c5cab;
+  --heat-ink-hi: #ffffff;
   /* hero: altijd donker */
   --hero-bg: linear-gradient(135deg, #0d1b33 0%, #13284d 55%, #1c3a6b 100%);
   --hero-text: #eef2fa;
@@ -57,6 +59,8 @@
     --grid: #242d3d;
     --axis: #3a4558;
     --ref: #8d97ab;
+    --heat-1: #104281; --heat-2: #1c5cab; --heat-3: #2a78d6; --heat-4: #6da7ec;
+    --heat-ink-hi: #0d1b33;
   }
 }
 :root[data-theme='dark'] {
@@ -82,6 +86,8 @@
   --grid: #242d3d;
   --axis: #3a4558;
   --ref: #8d97ab;
+  --heat-1: #104281; --heat-2: #1c5cab; --heat-3: #2a78d6; --heat-4: #6da7ec;
+  --heat-ink-hi: #0d1b33;
 }
 
 * { box-sizing: border-box; }
@@ -268,3 +274,78 @@ input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--acc
   .viz-wide .viz-label { font-size: 17px; }
   .viz-wide .viz-tick, .viz-wide .viz-ref-label { font-size: 15px; }
 }
+
+/* ---------------- Tabs ---------------- */
+.tabs {
+  display: flex; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 4px; box-shadow: var(--shadow); overflow-x: auto; position: sticky; top: 8px; z-index: 10;
+}
+.tab { background: transparent; color: var(--text-2); border-radius: 10px; padding: 0.5rem 1rem; white-space: nowrap; }
+.tab.active { background: var(--accent); color: #fff; }
+.stack { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---------------- Examendatum bewerken ---------------- */
+.tile-label { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.tile-edit {
+  background: transparent; color: #86b6ef; padding: 0; font-size: 0.75rem; text-transform: none; letter-spacing: 0;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.date-form { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.date-form input { background: rgba(255, 255, 255, 0.9); color: #121826; padding: 0.35rem 0.5rem; color-scheme: light; }
+.date-actions { display: flex; gap: 6px; }
+.chip-solid { background: #2a78d6; border-color: #2a78d6; }
+
+/* ---------------- Foutenanalyse ---------------- */
+.callout { display: flex; flex-direction: column; gap: 4px; background: var(--danger-soft); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; color: var(--text-2); }
+.callout-big { font-size: 1.25rem; font-weight: 700; color: var(--danger); }
+.topiclist { margin: 0; padding-left: 1.2rem; }
+.topiclist li { margin: 0.3rem 0; }
+.topiclist li > span:first-child { margin-right: 8px; }
+.topiclist li { display: list-item; }
+.topiclist .score { float: right; }
+.heat { display: flex; flex-direction: column; gap: 4px; }
+.heat-row { display: grid; grid-template-columns: 40px repeat(4, 1fr); gap: 4px; align-items: center; }
+.heat-head span { font-size: 0.72rem; color: var(--muted); text-align: center; line-height: 1.2; }
+.heat-cell {
+  height: 44px; border-radius: 8px; background: var(--grid); color: var(--text); font-weight: 650; padding: 0;
+  font-variant-numeric: tabular-nums;
+}
+.heat-1 { background: var(--heat-1); }
+.heat-2 { background: var(--heat-2); }
+.heat-3 { background: var(--heat-3); color: var(--heat-ink-hi); }
+.heat-4 { background: var(--heat-4); color: var(--heat-ink-hi); }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; }
+select {
+  font: inherit; font-size: 0.85rem; color: var(--text); background: var(--card-2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0.4rem 0.6rem; max-width: 100%;
+}
+.mistakes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.mistake { padding: 14px 0; border-top: 1px solid var(--border); }
+.mistake:first-child { border-top: 0; }
+.mistake-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.mistake-q { margin: 0.2rem 0; }
+.wrong { color: var(--danger); }
+.right { color: var(--good); }
+.lesson { background: var(--card-2); border-left: 3px solid var(--accent); padding: 8px 10px; border-radius: 6px; margin: 8px 0; font-size: 0.9rem; }
+.pill { font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 99px; background: var(--accent-soft); color: var(--accent-ink); white-space: nowrap; }
+.pill-technical_reflex { background: var(--danger-soft); color: var(--danger); }
+.pill-definition_knowledge { background: var(--card-2); color: var(--text-2); border: 1px solid var(--border); }
+.pill-misread_keyword { background: var(--card-2); color: var(--text-2); border: 1px solid var(--border); }
+.small-btn { font-size: 0.82rem; padding: 0.35rem 0.75rem; }
+
+/* ---------------- Kennisbank ---------------- */
+.terms { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+@media (max-width: 400px) { .terms { grid-template-columns: 1fr; } }
+.term { display: flex; flex-direction: column; }
+.term p { margin: 0.3rem 0; }
+.term > button { align-self: flex-start; margin-top: auto; }
+.term-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.term-head h3 { margin: 0; font-size: 1rem; }
+.exam-tip { background: var(--accent-soft); border-radius: 8px; padding: 8px 10px; font-size: 0.9rem; margin: 8px 0 !important; }
+.linklike { background: none; color: var(--accent); padding: 0; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+.badge.active { background: var(--accent); color: #fff; }
+input[type='search'] { margin-bottom: 4px; }
+.card-head { flex-wrap: wrap; }
+.filters select { flex: 1 1 160px; min-width: 0; }
+.heat-row > * { min-width: 0; }
+.heat-head span { overflow-wrap: anywhere; }

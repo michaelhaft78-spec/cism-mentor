@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { describeGeminiError, generateWithFallback } from '@/lib/gemini';
 import { MASTER_SYSTEM_PROMPT } from '@/lib/master-prompt';
-import { normalizeState, parseLooseJson, splitTaggedBlock, stateForModel, withTodaySnapshot } from '@/lib/state';
+import {
+  normalizeState,
+  parseLooseJson,
+  splitTaggedBlock,
+  stateForModel,
+  withMistakeFromUpdate,
+  withTodaySnapshot,
+} from '@/lib/state';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getOrCreateState, saveState } from '@/lib/user-state';
 
@@ -59,7 +66,8 @@ export async function POST(req: Request) {
     let stateWarning: string | null = null;
     if (block) {
       try {
-        updatedState = withTodaySnapshot(normalizeState(parseLooseJson(block), currentState));
+        const parsed = parseLooseJson(block);
+        updatedState = withMistakeFromUpdate(withTodaySnapshot(normalizeState(parsed, currentState)), parsed);
       } catch (e) {
         console.error('STATE_UPDATE kon niet worden geparsed:', e, block.slice(0, 500));
         stateWarning = 'De voortgang kon deze keer niet worden bijgewerkt (ongeldige JSON van het model). Je vorige stand is bewaard.';

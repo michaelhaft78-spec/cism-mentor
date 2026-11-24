@@ -6,6 +6,8 @@ import { DOMAIN_KEYS } from '@/lib/state';
 import type { Briefing, ChatMessage, CismState, DomainKey, ProgressPoint } from '@/lib/types';
 import { DomainRadar, ErrorBars, GainBars, ReadinessTrend, TARGET } from './charts';
 import ThemeToggle from './ThemeToggle';
+import MistakeAnalysis from './MistakeAnalysis';
+import KnowledgeBase from './KnowledgeBase';
 
 interface Props {
   email: string;
@@ -43,6 +45,9 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [intelBusy, setIntelBusy] = useState(false);
+  const [tab, setTab] = useState<'overzicht' | 'fouten' | 'kennis'>('overzicht');
+  const [editDate, setEditDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState(initialState.user_profile.target_exam_date);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatRef = useRef<HTMLElement>(null);
 
@@ -76,6 +81,23 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
     }
   }
 
+  async function saveExamDate() {
+    setNotice(null);
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_exam_date: dateDraft }),
+      });
+      const data = await readJson(res);
+      if (!res.ok) throw new Error(data.error || 'Opslaan mislukt');
+      setState(data.state);
+      setEditDate(false);
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Opslaan mislukt.');
+    }
+  }
+
   async function newConversation() {
     if (busy) return;
     await fetch('/api/chat', { method: 'DELETE' });
@@ -105,6 +127,7 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
   const attempted = DOMAIN_KEYS.reduce((s, k) => s + state.domains[k].questions_attempted, 0);
   const correct = DOMAIN_KEYS.reduce((s, k) => s + state.domains[k].questions_correct, 0);
   const history = state.progress_history?.length ? state.progress_history : fallbackHistory;
+  const days = daysUntil(state.user_profile.target_exam_date) ?? daysLeft;
   const examLabel = new Date(`${state.user_profile.target_exam_date}T00:00:00Z`).toLocaleDateString('nl-NL', {
     day: 'numeric',
     month: 'long',
@@ -149,9 +172,53 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
 
           <div className="tiles">
             <div className="tile">
-              <span className="tile-label">Examen</span>
-              <span className="tile-value">{daysLeft !== null ? `${daysLeft} dagen` : '—'}</span>
-              <span className="tile-sub">{examLabel}</span>
+              <span className="tile-label">
+                Examen
+                {!editDate && (
+                  <button className="tile-edit" onClick={() => setEditDate(true)} title="Examendatum wijzigen">
+                    wijzig
+                  </button>
+                )}
+              </span>
+              {editDate ? (
+                <form
+                  className="date-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    saveExamDate();
+                  }}
+                >
+                  <input
+                    type="date"
+                    value={dateDraft}
+                    onChange={(e) => setDateDraft(e.target.value)}
+                    required
+                    aria-label="Examendatum"
+                  />
+                  <div className="date-actions">
+                    <button type="submit" className="chip chip-solid">
+                      Opslaan
+                    </button>
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => {
+                        setEditDate(false);
+                        setDateDraft(state.user_profile.target_exam_date);
+                      }}
+                    >
+                      Annuleer
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <span className="tile-value">
+                    {days === null ? '—' : days > 0 ? `${days} dagen` : days === 0 ? 'Vandaag!' : 'Geweest'}
+                  </span>
+                  <span className="tile-sub">{examLabel}</span>
+                </>
+              )}
             </div>
             <div className="tile">
               <span className="tile-label">Geoefend</span>
@@ -173,6 +240,25 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
       </header>
 
       <main className="page">
+        <nav className="tabs" aria-label="Onderdelen">
+          {(
+            [
+              ['overzicht', 'Overzicht'],
+              ['fouten', `Foutenanalyse${state.mistake_log?.length ? ` (${state.mistake_log.length})` : ''}`],
+              ['kennis', 'Kennisbank'],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} className={`tab ${tab === k ? 'active' : ''}`} onClick={() => setTab(k)} aria-current={tab === k}>
+              {label}
+            </button>
+          ))}
+        </nav>
+
+        {tab === 'fouten' && <MistakeAnalysis state={state} busy={busy} onPractice={send} />}
+        {tab === 'kennis' && <KnowledgeBase busy={busy} onAsk={send} />}
+
+        {tab === 'overzicht' && (
+        <>
         {/* 2. Visualisaties */}
         <div className="grid grid-viz">
           <section className="card">
@@ -302,6 +388,9 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
           </section>
         </div>
 
+        </>
+        )}
+
       {/* Chat met de mentor */}
       <section className="card chat" ref={chatRef}>
         <div className="card-head">
@@ -369,6 +458,12 @@ export default function Dashboard({ email, initialState, daysLeft, briefing, ini
       </main>
     </>
   );
+}
+
+function daysUntil(dateStr: string): number | null {
+  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Amsterdam' }).format(new Date());
+  const ms = Date.parse(`${dateStr}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`);
+  return Number.isFinite(ms) ? Math.round(ms / 86_400_000) : null;
 }
 
 function biggestGain(state: CismState) {
