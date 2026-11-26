@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { QUESTIONS, type Question } from '@/lib/questions';
+import { QUESTIONS, type Question, type QuestionLevel } from '@/lib/questions';
 import type { CismState } from '@/lib/types';
 import { ERROR_LABEL } from './MistakeAnalysis';
 
@@ -24,6 +24,13 @@ const KEYWORD_NL: Record<Question['keyword'], string> = {
   MOST: 'MEEST',
   PRIMARY: 'PRIMAIR',
 };
+const LEVELS: { key: 'all' | QuestionLevel; label: string; sub: string }[] = [
+  { key: 'all', label: 'Alle niveaus', sub: 'door elkaar' },
+  { key: 'basis', label: 'Basis', sub: 'begrippen kennen' },
+  { key: 'gemiddeld', label: 'Gemiddeld', sub: 'toepassen in een situatie' },
+  { key: 'examen', label: 'Examenniveau', sub: 'lastige afleiders, zoals op het examen' },
+];
+const LEVEL_NL: Record<QuestionLevel, string> = { basis: 'Basis', gemiddeld: 'Gemiddeld', examen: 'Examenniveau' };
 const LETTERS = ['A', 'B', 'C', 'D'];
 const ROUND = 10;
 
@@ -36,8 +43,17 @@ function shuffle<T>(a: T[]): T[] {
   return r;
 }
 
-/** Nieuwe vragen eerst, daarna eerder fout beantwoorde, daarna de rest. */
-function buildRound(set: string, state: CismState): Question[] {
+/** Een vraag zoals getoond: opties in willekeurige volgorde; orig[i] is de oorspronkelijke index van optie i. */
+type Shown = Question & { orig: number[] };
+
+/** Husselt de antwoordopties, zodat je niet op de letter gaat onthouden. */
+function shuffleOptions(q: Question): Shown {
+  const orig = shuffle(q.options.map((_, i) => i));
+  return { ...q, options: orig.map((i) => q.options[i]), correct: orig.indexOf(q.correct), orig };
+}
+
+/** Alle vragen in de gekozen set en op het gekozen niveau. */
+function poolFor(set: string, level: string, state: CismState): Question[] {
   const results = state.quiz_progress?.results ?? {};
   const weak = Object.values(state.domains).flatMap((d) => d.weak_topics.map((t) => t.toLowerCase()));
   // Onderwerpnamen uit de mentor-chat kunnen iets afwijken: "lijkt op" is genoeg.
@@ -45,9 +61,17 @@ function buildRound(set: string, state: CismState): Question[] {
     const t = topic.toLowerCase();
     return weak.some((w) => w.includes(t) || t.includes(w));
   };
-  const pool = QUESTIONS.filter((q) =>
-    set === 'mix' ? true : set === 'weak' ? isWeak(q.topic) || results[q.id] === false : q.domain === set,
+  return QUESTIONS.filter(
+    (q) =>
+      (set === 'mix' ? true : set === 'weak' ? isWeak(q.topic) || results[q.id] === false : q.domain === set) &&
+      (level === 'all' || q.level === level),
   );
+}
+
+/** Nieuwe vragen eerst, daarna eerder fout beantwoorde, daarna de rest. */
+function buildRound(set: string, level: string, state: CismState): Question[] {
+  const results = state.quiz_progress?.results ?? {};
+  const pool = poolFor(set, level, state);
   const fresh = shuffle(pool.filter((q) => !(q.id in results)));
   const wrong = shuffle(pool.filter((q) => results[q.id] === false));
   const right = shuffle(pool.filter((q) => results[q.id] === true));
@@ -64,7 +88,8 @@ async function readJson(res: Response): Promise<any> {
 
 export default function Practice({ state, onState }: { state: CismState; onState: (s: CismState) => void }) {
   const [set, setSet] = useState('mix');
-  const [round, setRound] = useState<Question[] | null>(null);
+  const [level, setLevel] = useState<string>('all');
+  const [round, setRound] = useState<Shown[] | null>(null);
   const [idx, setIdx] = useState(0);
   const [choice, setChoice] = useState<number | null>(null);
   const [answers, setAnswers] = useState<{ q: Question; correct: boolean }[]>([]);
@@ -74,13 +99,24 @@ export default function Practice({ state, onState }: { state: CismState; onState
   const answeredCount = Object.keys(results).length;
   const rightCount = Object.values(results).filter(Boolean).length;
   const weakCount = useMemo(
-    () => buildRound('weak', state).length,
+    () => poolFor('weak', 'all', state).length,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.quiz_progress, state.domains],
   );
 
+  // Aantallen per niveau binnen de gekozen set (voor de niveauknoppen).
+  const levelCounts = useMemo(() => {
+    const out: Record<string, { total: number; done: number }> = {};
+    for (const l of LEVELS) {
+      const pool = poolFor(set, l.key, state);
+      out[l.key] = { total: pool.length, done: pool.filter((q) => q.id in results).length };
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set, state.quiz_progress, state.domains]);
+
   function start(s = set) {
-    setRound(buildRound(s, state));
+    setRound(buildRound(s, level, state).map(shuffleOptions));
     setIdx(0);
     setChoice(null);
     setAnswers([]);
@@ -96,7 +132,7 @@ export default function Practice({ state, onState }: { state: CismState; onState
       const res = await fetch('/api/quiz/answer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId: q.id, choice: i }),
+        body: JSON.stringify({ questionId: q.id, choice: q.orig[i] }),
       });
       const data = await readJson(res);
       if (!res.ok || data.error) throw new Error(data.error ?? 'Opslaan mislukt');
@@ -159,8 +195,35 @@ export default function Practice({ state, onState }: { state: CismState; onState
               );
             })}
           </div>
-          <button className="quiz-start" onClick={() => start()}>
-            Start een ronde van {ROUND} vragen
+          <h3>Welk niveau?</h3>
+          <div className="quiz-sets quiz-levels" role="radiogroup" aria-label="Kies een niveau">
+            {LEVELS.map((l) => {
+              const c = levelCounts[l.key] ?? { total: 0, done: 0 };
+              return (
+                <button
+                  key={l.key}
+                  role="radio"
+                  aria-checked={level === l.key}
+                  className={`quiz-set ${level === l.key ? 'active' : ''}`}
+                  disabled={c.total === 0}
+                  onClick={() => setLevel(l.key)}
+                >
+                  <strong>
+                    {l.key !== 'all' && <span className={`level-dot level-${l.key}`} aria-hidden />}
+                    {l.label}
+                  </strong>
+                  <span>{l.sub}</span>
+                  <span>{c.total === 0 ? 'nog geen' : `${c.done}/${c.total} gedaan`}</span>
+                </button>
+              );
+            })}
+          </div>
+          <button
+            className="quiz-start"
+            disabled={(levelCounts[level]?.total ?? 0) === 0}
+            onClick={() => start()}
+          >
+            Start een ronde van {Math.min(ROUND, levelCounts[level]?.total ?? 0) || ROUND} vragen
           </button>
         </section>
       </div>
@@ -187,7 +250,7 @@ export default function Practice({ state, onState }: { state: CismState; onState
               <ul className="topiclist">
                 {missed.map(({ q }) => (
                   <li key={q.id}>
-                    <strong>{SHORT[q.domain]}</strong> {q.topic}
+                    <strong>{SHORT[q.domain]}</strong> {q.topic} <span className="muted">({LEVEL_NL[q.level]})</span>
                   </li>
                 ))}
               </ul>
@@ -227,6 +290,7 @@ export default function Practice({ state, onState }: { state: CismState; onState
         <div className="mistake-meta">
           <span className="pill">{SHORT[q.domain]}</span>
           <span className="pill">{q.topic}</span>
+          <span className={`pill pill-level level-${q.level}`}>{LEVEL_NL[q.level]}</span>
           <span className="pill pill-key">Sleutelwoord: {KEYWORD_NL[q.keyword]}</span>
         </div>
         <p className="quiz-q">{q.question}</p>

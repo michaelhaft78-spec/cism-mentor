@@ -365,6 +365,14 @@ input[type='search'] { margin-bottom: 4px; }
 .quiz-bar { height: 6px; background: var(--grid); border-radius: 99px; overflow: hidden; margin: 4px 0 12px; }
 .quiz-bar span { display: block; height: 100%; background: var(--accent); transition: width 0.25s; }
 .pill-key { background: var(--card-2); color: var(--text); border: 1px solid var(--border); }
+/* Zwaarte-niveaus: kleur plus label, zodat het niveau ook zonder kleur leesbaar is. */
+.level-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 6px; vertical-align: 1px; }
+.level-dot.level-basis { background: var(--good); }
+.level-dot.level-gemiddeld { background: var(--accent); }
+.level-dot.level-examen { background: var(--danger); }
+.pill-level.level-basis { background: var(--good-soft); color: var(--good); }
+.pill-level.level-gemiddeld { background: var(--accent-soft); color: var(--accent-ink); }
+.pill-level.level-examen { background: var(--danger-soft); color: var(--danger); }
 .quiz-q { font-size: 1.08rem; font-weight: 600; line-height: 1.45; margin: 10px 0 14px; }
 .quiz-options { display: flex; flex-direction: column; gap: 8px; }
 .quiz-option {
