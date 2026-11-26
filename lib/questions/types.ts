@@ -2,6 +2,9 @@ import type { DomainKey, ErrorType } from '../types';
 
 export type QuestionKeyword = 'FIRST' | 'BEST' | 'MOST' | 'PRIMARY';
 
+/** Zwaarte: basis = begrip kennen, gemiddeld = toepassen, examen = ISACA-niveau met plausibele afleiders. */
+export type QuestionLevel = 'basis' | 'gemiddeld' | 'examen';
+
 export interface QuestionOption {
   text: string;
   /** Waarom deze optie (on)juist is. */
@@ -13,6 +16,7 @@ export interface QuestionOption {
 export interface Question {
   id: string;
   domain: DomainKey;
+  level: QuestionLevel;
   topic: string;
   keyword: QuestionKeyword;
   question: string;

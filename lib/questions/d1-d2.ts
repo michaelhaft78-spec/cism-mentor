@@ -8,6 +8,7 @@ export const D1_D2: Question[] = [
   // ======================= Domein 1: Governance =======================
   {
     id: 'd1-01',
+    level: 'basis',
     domain: 'domain_1_governance',
     topic: 'Business Alignment',
     keyword: 'FIRST',
@@ -23,6 +24,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-02',
+    level: 'gemiddeld',
     domain: 'domain_1_governance',
     topic: 'Reporting Lines',
     keyword: 'BEST',
@@ -37,6 +39,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-03',
+    level: 'basis',
     domain: 'domain_1_governance',
     topic: 'Security Policy vs Standards',
     keyword: 'MOST',
@@ -51,6 +54,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-04',
+    level: 'basis',
     domain: 'domain_1_governance',
     topic: 'Data Ownership',
     keyword: 'PRIMARY',
@@ -65,6 +69,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-05',
+    level: 'gemiddeld',
     domain: 'domain_1_governance',
     topic: 'Senior Management Commitment',
     keyword: 'BEST',
@@ -79,6 +84,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-06',
+    level: 'basis',
     domain: 'domain_1_governance',
     topic: 'Steering Committee',
     keyword: 'PRIMARY',
@@ -93,6 +99,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-07',
+    level: 'gemiddeld',
     domain: 'domain_1_governance',
     topic: 'Due Care vs Due Diligence',
     keyword: 'BEST',
@@ -107,6 +114,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-08',
+    level: 'examen',
     domain: 'domain_1_governance',
     topic: 'Business Alignment',
     keyword: 'MOST',
@@ -121,6 +129,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-09',
+    level: 'gemiddeld',
     domain: 'domain_1_governance',
     topic: 'Security Strategy',
     keyword: 'FIRST',
@@ -135,6 +144,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd1-10',
+    level: 'examen',
     domain: 'domain_1_governance',
     topic: 'Reporting Lines',
     keyword: 'MOST',
@@ -151,6 +161,7 @@ export const D1_D2: Question[] = [
   // ======================= Domein 2: Risk Management =======================
   {
     id: 'd2-01',
+    level: 'basis',
     domain: 'domain_2_risk_management',
     topic: 'Risk Appetite vs Tolerance',
     keyword: 'PRIMARY',
@@ -165,6 +176,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-02',
+    level: 'examen',
     domain: 'domain_2_risk_management',
     topic: 'Risk Appetite vs Tolerance',
     keyword: 'BEST',
@@ -179,6 +191,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-03',
+    level: 'gemiddeld',
     domain: 'domain_2_risk_management',
     topic: 'Risk Assessment',
     keyword: 'FIRST',
@@ -193,6 +206,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-04',
+    level: 'gemiddeld',
     domain: 'domain_2_risk_management',
     topic: 'Risk Treatment',
     keyword: 'BEST',
@@ -207,6 +221,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-05',
+    level: 'basis',
     domain: 'domain_2_risk_management',
     topic: 'BIA metrics (RTO/RPO)',
     keyword: 'MOST',
@@ -221,6 +236,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-06',
+    level: 'gemiddeld',
     domain: 'domain_2_risk_management',
     topic: 'BIA metrics (RTO/RPO)',
     keyword: 'FIRST',
@@ -235,6 +251,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-07',
+    level: 'basis',
     domain: 'domain_2_risk_management',
     topic: 'Risk Ownership',
     keyword: 'PRIMARY',
@@ -249,6 +266,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-08',
+    level: 'examen',
     domain: 'domain_2_risk_management',
     topic: 'Risk Register',
     keyword: 'FIRST',
@@ -263,6 +281,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-09',
+    level: 'basis',
     domain: 'domain_2_risk_management',
     topic: 'KRI',
     keyword: 'BEST',
@@ -277,6 +296,7 @@ export const D1_D2: Question[] = [
   },
   {
     id: 'd2-10',
+    level: 'gemiddeld',
     domain: 'domain_2_risk_management',
     topic: 'Risk Treatment',
     keyword: 'MOST',

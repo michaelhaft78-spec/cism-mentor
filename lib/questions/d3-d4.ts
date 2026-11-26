@@ -8,6 +8,7 @@ export const D3_D4: Question[] = [
   // ================ Domein 3: Information Security Program ================
   {
     id: 'd3-01',
+    level: 'gemiddeld',
     domain: 'domain_3_security_program',
     topic: 'Metrics & KPIs',
     keyword: 'MOST',
@@ -23,6 +24,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-02',
+    level: 'basis',
     domain: 'domain_3_security_program',
     topic: 'Third-Party Risk',
     keyword: 'FIRST',
@@ -38,6 +40,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-03',
+    level: 'gemiddeld',
     domain: 'domain_3_security_program',
     topic: 'Third-Party Risk',
     keyword: 'BEST',
@@ -53,6 +56,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-04',
+    level: 'gemiddeld',
     domain: 'domain_3_security_program',
     topic: 'Security Awareness',
     keyword: 'BEST',
@@ -67,6 +71,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-05',
+    level: 'basis',
     domain: 'domain_3_security_program',
     topic: 'Control Selection',
     keyword: 'PRIMARY',
@@ -81,6 +86,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-06',
+    level: 'examen',
     domain: 'domain_3_security_program',
     topic: 'Program Resources',
     keyword: 'BEST',
@@ -96,6 +102,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-07',
+    level: 'basis',
     domain: 'domain_3_security_program',
     topic: 'Metrics & KPIs',
     keyword: 'MOST',
@@ -110,6 +117,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-08',
+    level: 'basis',
     domain: 'domain_3_security_program',
     topic: 'Security in Change / Projects',
     keyword: 'BEST',
@@ -124,6 +132,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-09',
+    level: 'examen',
     domain: 'domain_3_security_program',
     topic: 'Compliance vs Security',
     keyword: 'PRIMARY',
@@ -139,6 +148,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd3-10',
+    level: 'gemiddeld',
     domain: 'domain_3_security_program',
     topic: 'Program Roadmap',
     keyword: 'FIRST',
@@ -156,6 +166,7 @@ export const D3_D4: Question[] = [
   // ===================== Domein 4: Incident Management =====================
   {
     id: 'd4-01',
+    level: 'gemiddeld',
     domain: 'domain_4_incident_management',
     topic: 'Containment vs Eradication order',
     keyword: 'FIRST',
@@ -171,6 +182,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-02',
+    level: 'basis',
     domain: 'domain_4_incident_management',
     topic: 'Post-Incident Review',
     keyword: 'PRIMARY',
@@ -185,6 +197,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-03',
+    level: 'examen',
     domain: 'domain_4_incident_management',
     topic: 'Incident Response Plan',
     keyword: 'MOST',
@@ -199,6 +212,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-04',
+    level: 'basis',
     domain: 'domain_4_incident_management',
     topic: 'Incident Classification',
     keyword: 'FIRST',
@@ -213,6 +227,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-05',
+    level: 'basis',
     domain: 'domain_4_incident_management',
     topic: 'BCP vs DRP',
     keyword: 'PRIMARY',
@@ -227,6 +242,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-06',
+    level: 'gemiddeld',
     domain: 'domain_4_incident_management',
     topic: 'Evidence Handling',
     keyword: 'BEST',
@@ -242,6 +258,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-07',
+    level: 'gemiddeld',
     domain: 'domain_4_incident_management',
     topic: 'Plan Testing',
     keyword: 'BEST',
@@ -256,6 +273,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-08',
+    level: 'examen',
     domain: 'domain_4_incident_management',
     topic: 'Escalation & Communication',
     keyword: 'MOST',
@@ -271,6 +289,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-09',
+    level: 'gemiddeld',
     domain: 'domain_4_incident_management',
     topic: 'BIA metrics (RTO/RPO)',
     keyword: 'PRIMARY',
@@ -285,6 +304,7 @@ export const D3_D4: Question[] = [
   },
   {
     id: 'd4-10',
+    level: 'basis',
     domain: 'domain_4_incident_management',
     topic: 'Recovery',
     keyword: 'FIRST',
